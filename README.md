@@ -16,3 +16,4 @@ File "/Users/sofianefugon/PycharmProjects/selenium-cicd-tp-/tests/test_selenium.
         
 2. Défis rencontrés avec Selenium
     
+    Globalement les erreur au niveau du python qui fessait des erreur sur le python 
