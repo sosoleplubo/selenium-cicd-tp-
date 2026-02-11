@@ -1,126 +1,76 @@
 import pytest
 import time
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.chrome.options import Options
 import os
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from calculator_page import CalculatorPage
+
+
+@pytest.fixture(scope="class")
+def driver():
+    chrome_options = Options()
+
+    if os.getenv('CI'):
+        chrome_options.add_argument("--headless=new")
+
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--window-size=1920,1080')
+
+    driver = webdriver.Chrome(options=chrome_options)
+    driver.implicitly_wait(10)
+
+    yield driver
+    driver.quit()
+
+
+@pytest.fixture
+def calculator(driver):
+    page = CalculatorPage(driver)
+    page.load_page()
+    return page
 
 
 class TestCalculator:
 
-    @pytest.fixture(scope="class")
-    def driver(self):
-        chrome_options = Options()
+    def test_page_loads(self, calculator):
+        assert "Calculatrice Simple" in calculator.driver.title
 
-        if os.getenv('CI'):
-            chrome_options.add_argument("--headless=new")
+    def test_addition(self, calculator):
+        calculator.enter_first_number(10)
+        calculator.enter_second_number(5)
+        calculator.select_operation("add")
+        calculator.click_calculate()
 
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument('--window-size=1920,1080')
+        assert "Résultat: 15" in calculator.get_result()
 
-        driver = webdriver.Chrome(options=chrome_options)
-        driver.implicitly_wait(10)
+    def test_division_by_zero(self, calculator):
+        calculator.enter_first_number(10)
+        calculator.enter_second_number(0)
+        calculator.select_operation("divide")
+        calculator.click_calculate()
 
-        yield driver
-        driver.quit()
+        assert "Erreur: Division par zéro" in calculator.get_result()
 
-    def test_page_loads(self, driver):
-        file_path = os.path.abspath("../src/index.html")
-        driver.get(f"file://{file_path}")
-
-        assert "Calculatrice Simple" in driver.title
-        assert driver.find_element(By.ID, "num1").is_displayed()
-        assert driver.find_element(By.ID, "num2").is_displayed()
-        assert driver.find_element(By.ID, "operation").is_displayed()
-        assert driver.find_element(By.ID, "calculate").is_displayed()
-
-    def test_addition(self, driver):
-        file_path = os.path.abspath("../src/index.html")
-        driver.get(f"file://{file_path}")
-
-        driver.find_element(By.ID, "num1").send_keys("10")
-        driver.find_element(By.ID, "num2").send_keys("5")
-
-        select = Select(driver.find_element(By.ID, "operation"))
-        select.select_by_value("add")
-
-        driver.find_element(By.ID, "calculate").click()
-
-        result = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "result"))
-        )
-
-        assert "Résultat: 15" in result.text
-
-    def test_division_by_zero(self, driver):
-        file_path = os.path.abspath("../src/index.html")
-        driver.get(f"file://{file_path}")
-
-        driver.find_element(By.ID, "num1").clear()
-        driver.find_element(By.ID, "num1").send_keys("10")
-        driver.find_element(By.ID, "num2").clear()
-        driver.find_element(By.ID, "num2").send_keys("0")
-
-        select = Select(driver.find_element(By.ID, "operation"))
-        select.select_by_value("divide")
-
-        driver.find_element(By.ID, "calculate").click()
-
-        result = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "result"))
-        )
-
-        assert "Erreur: Division par zéro" in result.text
-
-    def test_all_operations(self, driver):
-        file_path = os.path.abspath("../src/index.html")
-        driver.get(f"file://{file_path}")
-
+    def test_all_operations(self, calculator):
         operations = [
-            ("add", "8", "2", "10"),
-            ("subtract", "8", "2", "6"),
-            ("multiply", "8", "2", "16"),
-            ("divide", "8", "2", "4")
+            ("add", 8, 2, "10"),
+            ("subtract", 8, 2, "6"),
+            ("multiply", 8, 2, "16"),
+            ("divide", 8, 2, "4")
         ]
 
-        for op, num1, num2, expected in operations:
-            driver.find_element(By.ID, "num1").clear()
-            driver.find_element(By.ID, "num2").clear()
+        for op, n1, n2, expected in operations:
+            calculator.enter_first_number(n1)
+            calculator.enter_second_number(n2)
+            calculator.select_operation(op)
+            calculator.click_calculate()
 
-            driver.find_element(By.ID, "num1").send_keys(num1)
-            driver.find_element(By.ID, "num2").send_keys(num2)
+            assert f"Résultat: {expected}" in calculator.get_result()
 
-            select = Select(driver.find_element(By.ID, "operation"))
-            select.select_by_value(op)
+    def test_page_load_time(self, calculator):
+        start = time.time()
+        calculator.load_page()
+        load_time = time.time() - start
 
-            driver.find_element(By.ID, "calculate").click()
-
-            result = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "result"))
-            )
-
-            assert f"Résultat: {expected}" in result.text
-            time.sleep(1)
-
-    def test_page_load_time(self, driver):
-        start_time = time.time()
-
-        file_path = os.path.abspath("../src/index.html")
-        driver.get(f"file://{file_path}")
-
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "calculator"))
-        )
-
-        load_time = time.time() - start_time
-
-        assert load_time < 3.0, f"Page trop lente à charger: {load_time:.2f}s"
-
-
-if __name__ == "__main__":
-    pytest.main(["-v", "--html=report.html", "--self-contained-html"])
+        assert load_time < 3

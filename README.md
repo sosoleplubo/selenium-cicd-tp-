@@ -16,4 +16,9 @@ File "/Users/sofianefugon/PycharmProjects/selenium-cicd-tp-/tests/test_selenium.
         
 2. Défis rencontrés avec Selenium
     
-    Globalement les erreur au niveau du python qui fessait des erreur sur le python 
+    Globalement les erreur au niveau du python qui fessait des erreur. Difficilement lisible les soucis avec el workflow aussi
+    pareil soucis au niveau des indentation 
+
+3. Métriques :
+    le % de test passé et le plus important pour moi indicateur de stabilité
+    Pareil plus c'est rapide mieux sait globalemet
